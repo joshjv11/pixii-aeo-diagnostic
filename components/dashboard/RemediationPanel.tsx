@@ -472,15 +472,20 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
                   description="Hand these to a creator — or use Pixii's UGC Video generator to produce the video instantly. These scripts embed the exact semantic keywords AI models index from YouTube and TikTok transcripts."
                 />
 
-                <div className="mb-4 flex items-center gap-3 bg-brand/5 border border-brand/10 rounded-lg px-4 py-2.5 w-fit">
+                <a
+                  href="https://pixii.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mb-4 flex items-center gap-3 bg-brand/5 border border-brand/10 rounded-lg px-4 py-2.5 w-fit hover:bg-brand/10 transition-colors"
+                >
                   <Sparkles className="h-4 w-4 text-brand shrink-0" aria-hidden="true" />
                   <p className="text-label-sm text-on-background">
                     Don&apos;t wait for a creator.{" "}
-                    <strong className="text-brand cursor-pointer hover:underline">
+                    <strong className="text-brand underline-offset-2 hover:underline">
                       Send to Pixii UGC Generator →
                     </strong>
                   </p>
-                </div>
+                </a>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {object?.ugc_video_scripts && object.ugc_video_scripts.length > 0
@@ -668,15 +673,20 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
                       Pixii Visual AI Prompts
                     </h5>
                   </div>
-                  <div className="mb-4 flex items-center gap-3 bg-brand/5 border border-brand/10 rounded-lg px-4 py-2.5 w-fit">
+                  <a
+                    href="https://pixii.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mb-4 flex items-center gap-3 bg-brand/5 border border-brand/10 rounded-lg px-4 py-2.5 w-fit hover:bg-brand/10 transition-colors"
+                  >
                     <Zap className="h-4 w-4 text-brand shrink-0" aria-hidden="true" />
                     <p className="text-label-sm text-on-background">
                       Stop bleeding clicks.{" "}
-                      <strong className="text-brand cursor-pointer hover:underline">
+                      <strong className="text-brand underline-offset-2 hover:underline">
                         Generate in Pixii Studio →
                       </strong>
                     </p>
-                  </div>
+                  </a>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {object?.pixii_visual_prompts && object.pixii_visual_prompts.length > 0
                       ? object.pixii_visual_prompts.map((prompt, i) => (
@@ -774,6 +784,8 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
               {/* Market Insights CTA */}
               <motion.div
                 variants={fadeSection}
+                initial="hidden"
+                animate="visible"
                 className="pt-6 border-t border-tertiary-fixed flex flex-col sm:flex-row items-center justify-between gap-4"
               >
                 <div>

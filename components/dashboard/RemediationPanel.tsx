@@ -1,7 +1,5 @@
 "use client";
 
-import { experimental_useObject as useObject } from '@ai-sdk/react';
-import { remediationSchema } from '@/lib/schemas/remediation';
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -19,8 +17,7 @@ import {
   BarChart2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useCallback, useEffect } from "react";
-import type { DeepPartial } from "ai";
+import { useState, useCallback } from "react";
 import type { RemediationOutput } from "@/lib/schemas/remediation";
 
 type RemediationPanelProps = {
@@ -65,7 +62,7 @@ const STEPS = [
   },
 ];
 
-function deriveStepStatus(object: DeepPartial<RemediationOutput> | undefined) {
+function deriveStepStatus(object: RemediationOutput | null) {
   return {
     analysis: !!object?.vulnerability_analysis,
     ugc: !!(object?.ugc_video_scripts && object.ugc_video_scripts.some((s) => s?.hook)),
@@ -81,7 +78,7 @@ function StrategyProgress({
   object,
   isLoading,
 }: {
-  object: DeepPartial<RemediationOutput> | undefined;
+  object: RemediationOutput | null;
   isLoading: boolean;
 }) {
   const status = deriveStepStatus(object);
@@ -305,51 +302,59 @@ function SkeletonBlock({ lines }: { lines: Array<{ width?: string }> }) {
 
 export default function RemediationPanel({ brandName, query, competitors }: RemediationPanelProps) {
   const [hasStarted, setHasStarted] = useState(false);
-  const [silentlyFailed, setSilentlyFailed] = useState(false);
-  const [streamError, setStreamError] = useState<string | null>(null);
+  const [object, setObject] = useState<RemediationOutput | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { object, submit, isLoading, error } = useObject({
-    api: '/api/remediate',
-    schema: remediationSchema,
-    onError: (err) => {
-      // Fires for network-level and parse errors that useObject surfaces
-      console.error('[RemediationPanel] useObject error:', err);
-      setStreamError(err.message ?? 'Stream error');
-    },
-  });
-
-  // Detect when the stream finishes but returned no usable data (e.g. mid-stream model failure)
-  useEffect(() => {
-    if (hasStarted && !isLoading && !error) {
-      const hasAnyData = !!(
-        object?.vulnerability_analysis ||
-        (object?.ugc_video_scripts && object.ugc_video_scripts.some((s) => s?.hook)) ||
-        (object?.reddit_seeding_strategy && object.reddit_seeding_strategy.some((s) => s?.question_to_ask)) ||
-        object?.amazon_listing?.title
-      );
-      setSilentlyFailed(!hasAnyData);
-    }
-  }, [isLoading, hasStarted, error, object]);
-
-  const handleGenerate = () => {
+  const handleGenerate = useCallback(async () => {
     setHasStarted(true);
-    setSilentlyFailed(false);
-    setStreamError(null);
-    submit({ brandName, query, competitors });
-  };
+    setIsLoading(true);
+    setErrorMessage(null);
+    setObject(null);
 
-  const showError = error || silentlyFailed || !!streamError;
-  const isDeployed = hasStarted && !isLoading && !showError;
+    try {
+      const res = await fetch('/api/remediate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brandName, query, competitors }),
+      });
+
+      // Read raw text first — prevents crashes if the server ever returns HTML
+      const text = await res.text();
+      let data: unknown;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          `The server returned an unexpected response (${res.status}). Please try again.`,
+        );
+      }
+
+      if (!res.ok) {
+        const errBody = data as { error?: string };
+        throw new Error(
+          errBody?.error ?? `Request failed with status ${res.status}. Please try again.`,
+        );
+      }
+
+      setObject(data as RemediationOutput);
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred. Please try again.',
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [brandName, query, competitors]);
+
+  const showError = !!errorMessage;
+  const isDeployed = hasStarted && !isLoading && !showError && !!object;
   const buttonDisabled = isLoading || isDeployed;
 
-  // Prioritise explicit errors; fall back to a specific capacity message for silent failures
-  const errorMessage =
-    streamError ??
-    error?.message ??
-    'The AI model returned an empty response — this is usually a capacity spike. Please retry in a few seconds.';
-
   const amazonCopyText = object?.amazon_listing
-    ? `TITLE:\n${object.amazon_listing.title ?? ''}\n\nBULLETS:\n${(object.amazon_listing.bullets ?? []).filter(Boolean).map((b) => `• ${b}`).join('\n')}`
+    ? `TITLE:\n${object.amazon_listing.title}\n\nBULLETS:\n${object.amazon_listing.bullets.filter(Boolean).map((b) => `• ${b}`).join('\n')}`
     : '';
 
   return (

@@ -1,26 +1,164 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Inter", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-label-sm: "Inter", sans-serif;
+  --font-label-md: "Inter", sans-serif;
+  --font-h1: "Inter", sans-serif;
+  --font-h2: "Inter", sans-serif;
+
+  --text-display: 40px;
+  --text-h1: 24px;
+  --text-h2: 18px;
+  --text-body-lg: 16px;
+  --text-body-md: 14px;
+  --text-label-md: 13px;
+  --text-label-sm: 11px;
+
+  /* ── Spacing ─────────────────────────────────────────────────────────── */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-gutter: 16px;
+
+  /* ── Border radius ───────────────────────────────────────────────────── */
+  --radius: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* ── Brand ───────────────────────────────────────────────────────────── */
+  --color-brand: #cf4522;
+  --color-brand-hover: #b63c1e;
+
+  /* ── Backgrounds & Surfaces ──────────────────────────────────────────── */
+  --color-background: #f9f9ff;
+  --color-surface: #f9f9ff;
+  --color-surface-bright: #f9f9ff;
+  --color-surface-dim: #d3daea;
+  --color-surface-container: #e7eefe;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f0f3ff;
+  --color-surface-container-high: #e2e8f8;
+  --color-surface-container-highest: #dce2f3;
+  --color-surface-variant: #dce2f3;
+  --color-surface-tint: #ac3231;
+  --color-inverse-surface: #2a313d;
+  --color-inverse-on-surface: #ebf1ff;
+
+  /* ── Content (on-*) ──────────────────────────────────────────────────── */
+  --color-on-background: #151c27;
+  --color-on-surface: #151c27;
+  --color-on-surface-variant: #58413f;
+
+  /* ── Primary ─────────────────────────────────────────────────────────── */
+  --color-primary: #a8302f;
+  --color-primary-container: #ca4845;
+  --color-primary-fixed: #ffdad7;
+  --color-primary-fixed-dim: #ffb3ae;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #fffbff;
+  --color-on-primary-fixed: #410004;
+  --color-on-primary-fixed-variant: #8b191d;
+  --color-inverse-primary: #ffb3ae;
+
+  /* ── Secondary ───────────────────────────────────────────────────────── */
+  --color-secondary: #575e70;
+  --color-secondary-container: #d9dff5;
+  --color-secondary-fixed: #dce2f7;
+  --color-secondary-fixed-dim: #c0c6db;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #5c6274;
+  --color-on-secondary-fixed: #141b2b;
+  --color-on-secondary-fixed-variant: #404758;
+
+  /* ── Tertiary ────────────────────────────────────────────────────────── */
+  --color-tertiary: #5a5c5d;
+  --color-tertiary-container: #737576;
+  --color-tertiary-fixed: #e1e3e4;
+  --color-tertiary-fixed-dim: #c5c7c8;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #fcfdfe;
+  --color-on-tertiary-fixed: #191c1d;
+  --color-on-tertiary-fixed-variant: #454748;
+
+  /* ── Error ───────────────────────────────────────────────────────────── */
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  /* ── Outline ─────────────────────────────────────────────────────────── */
+  --color-outline: #8c716e;
+  --color-outline-variant: #dfbfbc;
+
+  /* ── shadcn/ui alias tokens ──────────────────────────────────────────── */
+  --font-heading: "Inter", sans-serif;
+  --color-foreground: #151c27;
+  --color-card: #ffffff;
+  --color-card-foreground: #151c27;
+  --color-muted: #e7eefe;
+  --color-muted-foreground: #575e70;
+  --color-border: #e1e3e4;
+  --color-input: #e1e3e4;
+  --color-ring: #cf4522;
+  --color-primary-foreground: #ffffff;
+  --color-secondary-foreground: #ffffff;
+  --color-destructive: #ba1a1a;
+  --color-destructive-foreground: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ── Custom keyframes ────────────────────────────────────────────────────── */
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes pulse-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40%           { transform: scale(1);   opacity: 1;   }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-on-background);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .animate-float {
+    animation: float 3.2s ease-in-out infinite;
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  }
+  .animate-marquee {
+    animation: marquee 36s linear infinite;
+  }
 }

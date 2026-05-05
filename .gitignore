@@ -40,5 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# repomix
+# repomix / LLM context
 repomix-output.*
+llm-context.txt

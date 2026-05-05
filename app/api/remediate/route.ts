@@ -10,14 +10,14 @@ const MAX_INPUT_LENGTH = 200;
 
 // streamObject REQUIRES a model that supports streaming + structured JSON outputs simultaneously.
 // Groq blocks this at the infrastructure level (all models). Gemini is the only viable provider.
-// We cascade through multiple Gemini variants with maxRetries:1 per model for fast failover —
-// if one endpoint is overloaded, we move to the next within seconds rather than waiting 3×retry.
+// Order: stable GA models first, experimental last. maxRetries:1 per model so we fail fast and
+// move to the next variant instead of hammering one overloaded endpoint.
 const MODEL_CASCADE = [
-  google('gemini-2.5-flash'),
-  google('gemini-2.0-flash'),
-  google('gemini-2.0-flash-lite'),
-  google('gemini-1.5-flash'),
-  google('gemini-1.5-flash-8b'),
+  google('gemini-2.0-flash'),        // GA, fastest, most reliable for structured output
+  google('gemini-2.0-flash-lite'),   // Lighter quota, good fallback
+  google('gemini-1.5-flash'),        // Battle-tested GA model
+  google('gemini-2.5-flash'),        // Experimental — used as fallback, not primary
+  google('gemini-1.5-flash-8b'),     // Last resort: smallest, most available
 ];
 
 function sanitize(value: string): string {
@@ -140,16 +140,24 @@ export async function POST(req: Request) {
     const prompt = buildPrompt(safeBrand, safeQuery, topCompetitors);
     const sharedOptions = { schema: remediationSchema, prompt } as const;
 
-    // NOTE: streamObject errors that occur MID-STREAM (after the 200 is sent) cannot
-    // be caught here; the client's silentlyFailed detection handles those gracefully.
-    // Pre-stream errors (503 overloaded, auth failures) ARE catchable — we use maxRetries:1
-    // per model so we fail fast and move to the next variant instead of hammering one endpoint.
+    // NOTE: streamObject errors that occur MID-STREAM (after the 200 is sent) cannot be caught
+    // here — the HTTP 200 header is committed before streaming begins. Pre-stream errors (503,
+    // auth failures) ARE catchable via try/catch. We intentionally omit maxOutputTokens so the
+    // model self-determines its limit; capping at 8192 caused silent JSON truncation when the
+    // full schema output (analysis + scripts + Reddit pairs + listing) exceeded that budget.
     for (const model of MODEL_CASCADE) {
       try {
-        const result = streamObject({ model, maxOutputTokens: 8192, maxRetries: 1, ...sharedOptions });
+        const result = streamObject({
+          model,
+          maxRetries: 1,
+          onError: ({ error }) => {
+            console.error(`[AEO] streamObject mid-stream error:`, error);
+          },
+          ...sharedOptions,
+        });
         return result.toTextStreamResponse();
       } catch (err) {
-        console.warn(`[AEO] Model ${String(model)} failed, cascading...`, err);
+        console.warn(`[AEO] Model failed pre-stream, cascading...`, err);
         continue;
       }
     }

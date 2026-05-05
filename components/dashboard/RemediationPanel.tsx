@@ -306,13 +306,19 @@ function SkeletonBlock({ lines }: { lines: Array<{ width?: string }> }) {
 export default function RemediationPanel({ brandName, query, competitors }: RemediationPanelProps) {
   const [hasStarted, setHasStarted] = useState(false);
   const [silentlyFailed, setSilentlyFailed] = useState(false);
+  const [streamError, setStreamError] = useState<string | null>(null);
 
   const { object, submit, isLoading, error } = useObject({
     api: '/api/remediate',
     schema: remediationSchema,
+    onError: (err) => {
+      // Fires for network-level and parse errors that useObject surfaces
+      console.error('[RemediationPanel] useObject error:', err);
+      setStreamError(err.message ?? 'Stream error');
+    },
   });
 
-  // Detect when the stream finishes but returned no usable data (e.g. 503 mid-stream)
+  // Detect when the stream finishes but returned no usable data (e.g. mid-stream model failure)
   useEffect(() => {
     if (hasStarted && !isLoading && !error) {
       const hasAnyData = !!(
@@ -328,14 +334,19 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
   const handleGenerate = () => {
     setHasStarted(true);
     setSilentlyFailed(false);
+    setStreamError(null);
     submit({ brandName, query, competitors });
   };
 
-  const showError = error || silentlyFailed;
+  const showError = error || silentlyFailed || !!streamError;
   const isDeployed = hasStarted && !isLoading && !showError;
   const buttonDisabled = isLoading || isDeployed;
 
-  const errorMessage = error?.message ?? "Generation completed but returned no data. Please retry.";
+  // Prioritise explicit errors; fall back to a specific capacity message for silent failures
+  const errorMessage =
+    streamError ??
+    error?.message ??
+    'The AI model returned an empty response — this is usually a capacity spike. Please retry in a few seconds.';
 
   const amazonCopyText = object?.amazon_listing
     ? `TITLE:\n${object.amazon_listing.title ?? ''}\n\nBULLETS:\n${(object.amazon_listing.bullets ?? []).filter(Boolean).map((b) => `• ${b}`).join('\n')}`

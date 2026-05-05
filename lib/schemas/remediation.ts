@@ -21,9 +21,10 @@ export const remediationSchema = z.object({
           ),
       }),
     )
-    .length(2)
+    .min(1)
+    .max(3)
     .describe(
-      'Exactly 2 viral TikTok/YouTube Shorts UGC scripts that embed the semantic keywords competitors dominate, written as authentic user reviews.',
+      '2 viral TikTok/YouTube Shorts UGC scripts that embed the semantic keywords competitors dominate, written as authentic user reviews.',
     ),
 
   // Pillar 2: Reddit/Quora Seeding
@@ -42,17 +43,19 @@ export const remediationSchema = z.object({
           ),
       }),
     )
-    .length(2)
+    .min(1)
+    .max(3)
     .describe(
-      'Exactly 2 Reddit/Quora seeding pairs to build real-time semantic authority with models like Perplexity and ChatGPT that index community content.',
+      '2 Reddit/Quora seeding pairs to build real-time semantic authority with models like Perplexity and ChatGPT that index community content.',
     ),
 
   // Pillar 3: Pixii Visuals + Amazon Copy
   pixii_visual_prompts: z
     .array(z.string())
-    .length(3)
+    .min(1)
+    .max(5)
     .describe(
-      'Exactly 3 high-converting product image prompts for Pixii.ai. Each specific and production-ready, optimized for Amazon hero images.',
+      '3 high-converting product image prompts for Pixii.ai. Each specific and production-ready, optimized for Amazon hero images.',
     ),
 
   amazon_listing: z.object({
@@ -63,9 +66,10 @@ export const remediationSchema = z.object({
       ),
     bullets: z
       .array(z.string())
-      .length(5)
+      .min(3)
+      .max(7)
       .describe(
-        'Exactly 5 Amazon bullet points. Each starts with a power keyword in ALL CAPS followed by a plain-language benefit mapped to AI engine citation patterns.',
+        '5 Amazon bullet points. Each starts with a power keyword in ALL CAPS followed by a plain-language benefit mapped to AI engine citation patterns.',
       ),
   }),
 });

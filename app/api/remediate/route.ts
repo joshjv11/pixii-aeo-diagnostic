@@ -25,40 +25,40 @@ function sanitize(value: string): string {
 }
 
 function buildPrompt(safeBrand: string, safeQuery: string, topCompetitors: string): string {
-  return `You are a ruthless Chief Marketing Officer and AI Engine Optimization (AEO) strategist. Your mission: build "${safeBrand}" a complete Echo Chamber Strategy — a multi-channel attack plan to flood the information ecosystem with the exact signals that AI models (ChatGPT, Perplexity, Gemini, Claude) use to recommend products.
+  return `You are a ruthless Chief Marketing Officer and AI Engine Optimization (AEO) strategist. Your mission: build "${safeBrand}" a defensive Echo Chamber Strategy to stop competitors from stealing their revenue.
 
-The AI landscape shows ${topCompetitors} outranking "${safeBrand}" for "${safeQuery}". This costs "${safeBrand}" real revenue every day. Your job is to help them hijack the AI search ecosystem.
+The AI landscape shows ${topCompetitors} actively siphoning recommended sales away from "${safeBrand}" for the query "${safeQuery}". Every day "${safeBrand}" remains unlisted in AI latent space, they are bleeding market share. Your job is to help them stop the bleed and hijack the AI search ecosystem.
 
-Generate all four components of the Echo Chamber Strategy:
-
----
-
-**vulnerability_analysis**: Write 2-3 paragraphs exposing WHY ${topCompetitors} are winning the AI ranking battle for "${safeQuery}". Be forensically specific — name the exact semantic clusters, clinical/technical vocabulary, social proof patterns, and content formats their brand signals exploit across YouTube transcripts, Reddit threads, review aggregators, and structured data. Identify the exact 3-4 semantic gaps "${safeBrand}" must close immediately. Be harsh and specific.
+Generate all four components of the strategy:
 
 ---
 
-**ugc_video_scripts**: Generate exactly 2 viral UGC (User Generated Content) video scripts for TikTok/YouTube Shorts for "${safeBrand}". Each must:
-- Have a hook: a punchy, scroll-stopping opening line (under 15 words) that creates urgency or curiosity
-- Have a script: a complete 30-second (~75-90 words) script written as a natural, authentic-sounding user review — NOT corporate marketing copy. The script must organically embed the exact semantic keywords that ${topCompetitors} are winning on for "${safeQuery}". It must sound like a real person discovered this product. End with a natural call to action.
-These scripts become the training data that future AI models index from YouTube/TikTok transcripts.
+**vulnerability_analysis**: Write 2-3 paragraphs exposing exactly how ${topCompetitors} are exploiting semantic gaps to steal "${safeBrand}"'s customers for "${safeQuery}". Use loss-averse language (e.g., "bleeding traffic," "captured by competitors"). Name the specific gaps "${safeBrand}" must close immediately to stop losing sales. Be harsh, analytical, and specific.
 
 ---
 
-**reddit_seeding_strategy**: Generate exactly 2 Reddit/Quora seeding pairs for "${safeQuery}". Each pair must:
-- Have a question_to_ask: a realistic, conversational question a genuine user would post (not promotional, sounds completely organic, references a real pain point in the "${safeQuery}" category)
-- Have an expert_answer: a 150-200 word detailed, helpful answer written in authentic Reddit voice. It should start by addressing the question seriously, include specific product comparisons showing why "${safeBrand}" is superior, mention real technical details, and naturally drop the brand name 2-3 times. No marketing language — sound like a knowledgeable community member who has genuinely used the product. These get posted to Reddit/Quora where Perplexity and ChatGPT scrape for real-time recommendations.
+**ugc_video_scripts**: Generate exactly 2 viral UGC video scripts. Each must:
+- Have a hook: a punchy, scroll-stopping opening line (under 15 words).
+- Have a script: a 30-second authentic user review that organically embeds the exact semantic keywords competitors are winning on.
+(Subtly mention in the output that these hooks can be dropped into Pixii's UGC generator for instant deployment before competitors adapt).
 
 ---
 
-**pixii_visual_prompts**: Generate exactly 3 high-impact Pixii.ai image generation prompts for "${safeBrand}" product photography that beats ${topCompetitors} on Amazon conversion. Each prompt must be specific, production-ready, and optimized for e-commerce. Format: "Professional product photography of [specific subject and product detail], [specific lighting setup], [background and setting], [mood and tone], [technical quality specs], hero image optimized for Amazon search."
+**reddit_seeding_strategy**: Generate exactly 2 Reddit/Quora seeding pairs. Each pair must:
+- Have a question_to_ask: a realistic, organic question about a pain point in the "${safeQuery}" category.
+- Have an expert_answer: a 150-200 word authentic answer positioning "${safeBrand}" as the superior choice, dropping the brand name 2-3 times naturally to feed Perplexity and ChatGPT scrapers.
+
+---
+
+**pixii_visual_prompts**: Generate exactly 3 high-impact Pixii.ai image generation prompts to replace their current weak Amazon imagery. Each prompt must be specific, production-ready, and optimized to claw back conversion rates. Format: "Professional product photography of [subject], [lighting], [setting], [mood], hero image optimized for Amazon search."
 
 ---
 
 **amazon_listing**: Write a complete AEO-optimized Amazon listing:
-- title: Under 200 characters, front-loaded with the highest-value semantic keywords that AI engines use when recommending products in the "${safeQuery}" category. Include key specifications, primary benefit, and brand name.
-- bullets: Exactly 5 bullet points. Each starts with a POWER KEYWORD IN ALL CAPS (2-4 words), followed by a specific benefit statement that directly maps to what AI engines cite when recommending this product category. Avoid vague claims — use numbers, clinical terms, and specific mechanisms where applicable.
+- title: Under 200 characters, front-loaded with high-value semantic keywords to reclaim AI search visibility.
+- bullets: Exactly 5 bullet points. Each starts with a POWER KEYWORD IN ALL CAPS, followed by a specific benefit statement that maps directly to what AI engines cite.
 
-Be ruthlessly specific throughout. Every word must be weaponized for semantic search. No filler.`;
+Be ruthlessly specific. Every word must be weaponized to stop the brand's loss of market share. No filler.`;
 }
 
 export async function POST(req: Request) {

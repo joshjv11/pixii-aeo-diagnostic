@@ -358,9 +358,9 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
               </div>
               <h3 className="text-h2 font-semibold text-on-background">Echo Chamber Strategy</h3>
             </div>
-            <p className="text-body-md text-secondary pl-[2.375rem]">
-              A 3-pillar multi-channel attack plan to flood the AI information ecosystem
-              and steal semantic market share from{" "}
+            <p className="text-body-md text-secondary pl-[2.375rem] max-w-2xl">
+              Competitors are actively capturing AI traffic for your keywords.
+              Deploy this defensive strategy immediately to stop the bleed and reclaim your semantic market share from{" "}
               {competitors.length > 0
                 ? competitors.slice(0, 2).join(" & ")
                 : "top competitors"}
@@ -433,13 +433,17 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
                 animate="visible"
                 aria-labelledby="vuln-heading"
               >
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-1 h-4 rounded-full bg-brand shrink-0" aria-hidden="true" />
+                <div className="flex items-center gap-2.5 mb-3">
+                  {/* Pulsing threat indicator */}
+                  <span className="relative flex h-3 w-3 shrink-0" aria-hidden="true">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500" />
+                  </span>
                   <h4
                     id="vuln-heading"
-                    className="text-label-sm font-semibold uppercase tracking-wider text-secondary"
+                    className="text-label-sm font-semibold uppercase tracking-wider text-red-600 dark:text-red-500"
                   >
-                    Competitor Vulnerability Analysis
+                    Active Market Share Threats
                   </h4>
                 </div>
                 <div className="bg-surface-container-low border border-tertiary-fixed rounded-xl p-4 text-body-md text-on-background leading-relaxed min-h-[56px]">
@@ -467,6 +471,16 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
                   label="UGC Video Scripts"
                   description="Hand these to a creator — or use Pixii's UGC Video generator to produce the video instantly. These scripts embed the exact semantic keywords AI models index from YouTube and TikTok transcripts."
                 />
+
+                <div className="mb-4 flex items-center gap-3 bg-brand/5 border border-brand/10 rounded-lg px-4 py-2.5 w-fit">
+                  <Sparkles className="h-4 w-4 text-brand shrink-0" aria-hidden="true" />
+                  <p className="text-label-sm text-on-background">
+                    Don&apos;t wait for a creator.{" "}
+                    <strong className="text-brand cursor-pointer hover:underline">
+                      Send to Pixii UGC Generator →
+                    </strong>
+                  </p>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {object?.ugc_video_scripts && object.ugc_video_scripts.length > 0
@@ -653,6 +667,15 @@ export default function RemediationPanel({ brandName, query, competitors }: Reme
                     <h5 className="text-label-sm font-semibold uppercase tracking-wider text-secondary">
                       Pixii Visual AI Prompts
                     </h5>
+                  </div>
+                  <div className="mb-4 flex items-center gap-3 bg-brand/5 border border-brand/10 rounded-lg px-4 py-2.5 w-fit">
+                    <Zap className="h-4 w-4 text-brand shrink-0" aria-hidden="true" />
+                    <p className="text-label-sm text-on-background">
+                      Stop bleeding clicks.{" "}
+                      <strong className="text-brand cursor-pointer hover:underline">
+                        Generate in Pixii Studio →
+                      </strong>
+                    </p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {object?.pixii_visual_prompts && object.pixii_visual_prompts.length > 0

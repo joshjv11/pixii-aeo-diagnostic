@@ -7,11 +7,17 @@ export const maxDuration = 90;
 
 const MAX_INPUT_LENGTH = 200;
 
-// streamObject REQUIRES a model that supports streaming + json_schema simultaneously.
-// Groq blocks streaming with structured outputs at the infrastructure level (all models).
-// Gemini is the only provider with this capability. Use 2.5 Flash first, 2.0 Flash as fallback.
-const PRIMARY_MODEL = google('gemini-2.5-flash');
-const FALLBACK_MODEL = google('gemini-2.0-flash');
+// streamObject REQUIRES a model that supports streaming + structured JSON outputs simultaneously.
+// Groq blocks this at the infrastructure level (all models). Gemini is the only viable provider.
+// We cascade through multiple Gemini variants with maxRetries:1 per model for fast failover —
+// if one endpoint is overloaded, we move to the next within seconds rather than waiting 3×retry.
+const MODEL_CASCADE = [
+  google('gemini-2.5-flash'),
+  google('gemini-2.0-flash'),
+  google('gemini-2.0-flash-lite'),
+  google('gemini-1.5-flash'),
+  google('gemini-1.5-flash-8b'),
+];
 
 function sanitize(value: string): string {
   return value.trim().replace(/["""''`]/g, "'").slice(0, MAX_INPUT_LENGTH);
@@ -122,20 +128,20 @@ export async function POST(req: Request) {
 
   // NOTE: streamObject errors that occur MID-STREAM (after the 200 is sent) cannot
   // be caught here; the client's silentlyFailed detection handles those gracefully.
-  try {
-    const result = streamObject({ model: PRIMARY_MODEL, maxOutputTokens: 8192, ...sharedOptions });
-    return result.toTextStreamResponse();
-  } catch {
-    // Primary failed synchronously — try the secondary Gemini model before giving up.
+  // Pre-stream errors (503 overloaded, auth failures) ARE catchable — we use maxRetries:1
+  // per model so we fail fast and move to the next variant instead of hammering one endpoint.
+  for (const model of MODEL_CASCADE) {
     try {
-      const result = streamObject({ model: FALLBACK_MODEL, maxOutputTokens: 8192, ...sharedOptions });
+      const result = streamObject({ model, maxOutputTokens: 8192, maxRetries: 1, ...sharedOptions });
       return result.toTextStreamResponse();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'All models failed to generate strategy';
-      return new Response(JSON.stringify({ error: msg }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    } catch {
+      // This model is unavailable — try the next one in the cascade.
+      continue;
     }
   }
+
+  return new Response(
+    JSON.stringify({ error: 'All AI models are currently overloaded. Please try again in a moment.' }),
+    { status: 503, headers: { 'Content-Type': 'application/json' } },
+  );
 }

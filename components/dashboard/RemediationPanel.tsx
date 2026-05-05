@@ -139,7 +139,6 @@ function StrategyProgress({
                 const isDone = status[step.key];
                 const isActive = !isDone && i === activeIndex;
                 const isPending = !isDone && !isActive;
-                const StepIcon = step.icon;
 
                 return (
                   <div

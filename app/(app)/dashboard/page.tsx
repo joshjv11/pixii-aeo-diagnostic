@@ -161,7 +161,17 @@ export default function Home() {
         body: JSON.stringify({ brandName: trimmedBrand, query: trimmedQuery }),
       });
 
-      const data: unknown = await res.json().catch(() => null);
+      // Parse as text first — if Vercel returns HTML on a 504/502 crash,
+      // calling .json() directly would throw an unreadable SyntaxError.
+      const text = await res.text();
+      let data: unknown = null;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          `The server took too long to respond (Error ${res.status}). Please try again in a few moments.`,
+        );
+      }
 
       if (!res.ok) {
         const msg =
@@ -170,7 +180,7 @@ export default function Home() {
           "error" in data &&
           typeof (data as { error: unknown }).error === "string"
             ? (data as { error: string }).error
-            : "API request failed";
+            : `Diagnostic failed with status ${res.status}.`;
         throw new Error(msg);
       }
 
@@ -189,7 +199,7 @@ export default function Home() {
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to run diagnostic. Check your API keys and try again.",
+          : "Check your internet connection and try again.",
       );
     } finally {
       setLoading(false);

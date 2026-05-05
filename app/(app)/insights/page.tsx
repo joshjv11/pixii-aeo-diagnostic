@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -10,6 +11,104 @@ import {
 } from "recharts";
 import { Globe, AlertTriangle } from "lucide-react";
 import { useHistoryStore, type HistoryItem } from "@/store/useHistoryStore";
+
+/* ── Shared animation variants ───────────────────────────────────────────── */
+
+const EASE = [0.25, 0.46, 0.45, 0.94] as const;
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 22 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE } },
+};
+
+const stagger = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE } },
+};
+
+/* ── Animated section wrapper ────────────────────────────────────────────── */
+
+function AnimatedSection({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+  return (
+    <motion.div
+      ref={ref}
+      variants={fadeUp}
+      initial="hidden"
+      animate={inView ? "visible" : "hidden"}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ── Animated progress bar ───────────────────────────────────────────────── */
+
+function AnimatedBar({ pct, color }: { pct: number; color: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-20px" });
+  return (
+    <div ref={ref} className="flex-1 h-2.5 rounded-full bg-surface-dim overflow-hidden">
+      <motion.div
+        className="h-full rounded-full"
+        style={{ backgroundColor: color }}
+        initial={{ width: 0 }}
+        animate={{ width: inView ? `${pct}%` : 0 }}
+        transition={{ duration: 0.8, ease: [0.34, 1.56, 0.64, 1] }}
+      />
+    </div>
+  );
+}
+
+/* ── Animated engine coverage bar ────────────────────────────────────────── */
+
+function AnimatedCoverageBar({ rate, color }: { rate: number | null; color: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-20px" });
+  const barColor = (rate ?? 0) >= 50 ? "#22c55e" : (rate ?? 0) > 0 ? "#f59e0b" : "#ef4444";
+  return (
+    <div ref={ref} className="w-full h-2 rounded-full bg-surface-dim overflow-hidden">
+      <motion.div
+        className="h-full rounded-full"
+        style={{ backgroundColor: barColor }}
+        initial={{ width: 0 }}
+        animate={{ width: inView ? `${rate ?? 0}%` : 0 }}
+        transition={{ duration: 0.9, ease: [0.34, 1.56, 0.64, 1] }}
+      />
+    </div>
+  );
+}
+
+/* ── Animated counter ────────────────────────────────────────────────────── */
+
+function AnimatedNumber({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-20px" });
+  const [displayed, setDisplayed] = useState(0);
+
+  useEffect(() => {
+    if (!inView) return;
+    let start: number | null = null;
+    const duration = 900;
+    const step = (ts: number) => {
+      if (start === null) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayed(Math.round(eased * value));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [inView, value]);
+
+  return <span ref={ref}>{displayed}</span>;
+}
 
 /* ── Engine metadata ─────────────────────────────────────────────────────── */
 
@@ -240,112 +339,166 @@ function GlobalInsightsPanel({ brand }: { brand: string }) {
   }, [brand]);
 
   return (
-    <div className="mb-8">
+    <AnimatedSection className="mb-8">
       {/* Panel header */}
       <div className="flex items-center gap-3 mb-4">
         <h3 className="text-h2 font-semibold text-on-background">🌐 Global Platform Intelligence</h3>
-        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-label-sm font-semibold bg-brand/10 text-brand border border-brand/20">
+        <motion.span
+          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-label-sm font-semibold bg-brand/10 text-brand border border-brand/20"
+          animate={{ opacity: [0.7, 1, 0.7] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+        >
           <Globe className="h-3 w-3" /> Live Supabase Data
-        </span>
+        </motion.span>
       </div>
       <p className="text-body-md text-secondary mb-5">
         Aggregated across every scan ever run for <strong>{brand}</strong> on this platform
         {data?.totalDiagnostics ? ` — ${data.totalDiagnostics} total diagnostic${data.totalDiagnostics !== 1 ? "s" : ""}` : ""}.
       </p>
 
-      {loading ? (
-        <div className="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-56 bg-surface-container-low rounded-xl border border-tertiary-fixed" />
-          ))}
-        </div>
-      ) : fetchError ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-center gap-3 text-body-md text-red-700">
-          <AlertTriangle className="h-5 w-5 shrink-0" />
-          <span>Could not load global intelligence data. Check your connection and try refreshing.</span>
-        </div>
-      ) : !data || data.totalDiagnostics === 0 ? (
-        <div className="bg-surface-container-low rounded-xl border border-tertiary-fixed px-5 py-4 text-body-md text-secondary italic">
-          No global data found for <strong>{brand}</strong> yet. Run a scan to start building the intelligence moat.
-        </div>
-      ) : (
-        <div className="space-y-4">
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="animate-pulse grid grid-cols-1 md:grid-cols-3 gap-4"
+          >
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-56 bg-surface-container-low rounded-xl border border-tertiary-fixed" />
+            ))}
+          </motion.div>
+        ) : fetchError ? (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-center gap-3 text-body-md text-red-700"
+          >
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span>Could not load global intelligence data. Check your connection and try refreshing.</span>
+          </motion.div>
+        ) : !data || data.totalDiagnostics === 0 ? (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-surface-container-low rounded-xl border border-tertiary-fixed px-5 py-4 text-body-md text-secondary italic"
+          >
+            No global data found for <strong>{brand}</strong> yet. Run a scan to start building the intelligence moat.
+          </motion.div>
+        ) : (
+          <motion.div
+            key="data"
+            variants={stagger}
+            initial="hidden"
+            animate="visible"
+            className="space-y-4"
+          >
+            {/* Score trend */}
+            <motion.div variants={staggerItem} className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-5">
+              <p className="text-label-md font-semibold text-on-background mb-1">📈 Global Visibility Trend</p>
+              <p className="text-label-sm text-secondary mb-4">Historical AEO score across all platform scans.</p>
+              {data.scoreTrend.length >= 2 ? (
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data.scoreTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e1e3e4" vertical={false} />
+                      <XAxis dataKey="scan" tick={{ fill: "#575e70", fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <YAxis tickFormatter={(v) => `${v}%`} tick={{ fill: "#575e70", fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} />
+                      <RechartsTooltip
+                        contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", borderColor: "#e1e3e4" }}
+                        formatter={(v) => [`${v}% visibility`, "Score"]}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="score"
+                        stroke="#cf4522"
+                        strokeWidth={3}
+                        dot={{ r: 4, fill: "#cf4522", strokeWidth: 0 }}
+                        activeDot={{ r: 7, strokeWidth: 2, stroke: "#cf4522", fill: "#fff" }}
+                        isAnimationActive
+                        animationDuration={1200}
+                        animationEasing="ease-out"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-secondary italic text-body-md py-6 text-center">
+                  Only {data.scoreTrend.length} scan recorded globally — need at least 2 for a trend line.
+                  {data.scoreTrend[0] && <> Current global score: <strong className="text-brand">{data.scoreTrend[0].score}%</strong></>}
+                </p>
+              )}
+            </motion.div>
 
-          {/* Score trend */}
-          <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-5">
-            <p className="text-label-md font-semibold text-on-background mb-1">📈 Global Visibility Trend</p>
-            <p className="text-label-sm text-secondary mb-4">Historical AEO score across all platform scans.</p>
-            {data.scoreTrend.length >= 2 ? (
-              <div className="h-[200px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={data.scoreTrend} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e1e3e4" vertical={false} />
-                    <XAxis dataKey="scan" tick={{ fill: "#575e70", fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tickFormatter={(v) => `${v}%`} tick={{ fill: "#575e70", fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} />
-                    <RechartsTooltip
-                      contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", borderColor: "#e1e3e4" }}
-                      formatter={(v) => [`${v}% visibility`, "Score"]}
-                    />
-                    <Line type="monotone" dataKey="score" stroke="#cf4522" strokeWidth={3} dot={{ r: 4, fill: "#cf4522", strokeWidth: 0 }} activeDot={{ r: 7 }} />
-                  </LineChart>
-                </ResponsiveContainer>
+            <motion.div variants={staggerItem} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Engine bias radar */}
+              <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-5">
+                <p className="text-label-md font-semibold text-on-background mb-1">🤖 LLM Engine Bias Matrix</p>
+                <p className="text-label-sm text-secondary mb-4">% of global scans each engine recognised the brand.</p>
+                {data.engineBias.length > 0 ? (
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data.engineBias}>
+                        <PolarGrid stroke="#e1e3e4" />
+                        <PolarAngleAxis dataKey="engine" tick={{ fill: "#575e70", fontSize: 11 }} />
+                        <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                        <Radar
+                          name="Visibility %"
+                          dataKey="foundRate"
+                          stroke="#3b82f6"
+                          fill="#3b82f6"
+                          fillOpacity={0.35}
+                          isAnimationActive
+                          animationDuration={1000}
+                          animationEasing="ease-out"
+                        />
+                        <RechartsTooltip formatter={(v) => [`${v}%`, "Found rate"]} contentStyle={{ borderRadius: "8px" }} />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-secondary italic text-body-md py-8 text-center">No engine data available yet.</p>
+                )}
               </div>
-            ) : (
-              <p className="text-secondary italic text-body-md py-6 text-center">
-                Only {data.scoreTrend.length} scan recorded globally — need at least 2 for a trend line.
-                {data.scoreTrend[0] && <> Current global score: <strong className="text-brand">{data.scoreTrend[0].score}%</strong></>}
-              </p>
-            )}
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Engine bias radar */}
-            <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-5">
-              <p className="text-label-md font-semibold text-on-background mb-1">🤖 LLM Engine Bias Matrix</p>
-              <p className="text-label-sm text-secondary mb-4">% of global scans each engine recognised the brand.</p>
-              {data.engineBias.length > 0 ? (
-                <div className="h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={data.engineBias}>
-                      <PolarGrid stroke="#e1e3e4" />
-                      <PolarAngleAxis dataKey="engine" tick={{ fill: "#575e70", fontSize: 11 }} />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                      <Radar name="Visibility %" dataKey="foundRate" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.35} />
-                      <RechartsTooltip formatter={(v) => [`${v}%`, "Found rate"]} contentStyle={{ borderRadius: "8px" }} />
-                    </RadarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-secondary italic text-body-md py-8 text-center">No engine data available yet.</p>
-              )}
-            </div>
-
-            {/* Competitor threat bar */}
-            <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-5">
-              <p className="text-label-md font-semibold text-red-600 mb-1 flex items-center gap-1.5">
-                <AlertTriangle className="h-4 w-4" /> Top Semantic Threats
-              </p>
-              <p className="text-label-sm text-secondary mb-4">Competitors stealing recommendations globally.</p>
-              {data.topCompetitors.length > 0 ? (
-                <div className="h-[220px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={data.topCompetitors} layout="vertical" margin={{ left: 40, right: 12 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e1e3e4" />
-                      <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11 }} />
-                      <YAxis dataKey="name" type="category" stroke="#151c27" fontSize={11} fontWeight="bold" tick={{ fill: "#151c27" }} />
-                      <RechartsTooltip cursor={{ fill: "#f0f3ff" }} formatter={(v) => [v, "Times recommended"]} contentStyle={{ borderRadius: "8px" }} />
-                      <Bar dataKey="count" name="Times Recommended" fill="#cf4522" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <p className="text-secondary italic text-body-md py-8 text-center">No competitor threats detected yet.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+              {/* Competitor threat bar */}
+              <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-5">
+                <p className="text-label-md font-semibold text-red-600 mb-1 flex items-center gap-1.5">
+                  <AlertTriangle className="h-4 w-4" /> Top Semantic Threats
+                </p>
+                <p className="text-label-sm text-secondary mb-4">Competitors stealing recommendations globally.</p>
+                {data.topCompetitors.length > 0 ? (
+                  <div className="h-[220px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data.topCompetitors} layout="vertical" margin={{ left: 40, right: 12 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e1e3e4" />
+                        <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                        <YAxis dataKey="name" type="category" stroke="#151c27" fontSize={11} fontWeight="bold" tick={{ fill: "#151c27" }} />
+                        <RechartsTooltip cursor={{ fill: "#fff4f0" }} formatter={(v) => [v, "Times recommended"]} contentStyle={{ borderRadius: "8px" }} />
+                        <Bar
+                          dataKey="count"
+                          name="Times Recommended"
+                          fill="#cf4522"
+                          radius={[0, 4, 4, 0]}
+                          isAnimationActive
+                          animationDuration={900}
+                          animationEasing="ease-out"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-secondary italic text-body-md py-8 text-center">No competitor threats detected yet.</p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AnimatedSection>
   );
 }
 
@@ -377,16 +530,25 @@ export default function MarketInsights() {
   /* ── Loading skeleton ───────────────────────────────────────────────── */
   if (!mounted) {
     return (
-      <div className="max-w-5xl mx-auto pb-12 animate-pulse" aria-hidden="true">
-        <div className="mb-8">
+      <div className="max-w-5xl mx-auto pb-12" aria-hidden="true">
+        <div className="mb-8 animate-pulse">
           <div className="h-10 w-56 bg-surface-container-high rounded-lg mb-2" />
           <div className="h-5 w-80 bg-surface-container rounded-lg" />
         </div>
-        <div className="space-y-6">
+        <motion.div
+          className="space-y-6"
+          variants={stagger}
+          initial="hidden"
+          animate="visible"
+        >
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed h-48" />
+            <motion.div
+              key={i}
+              variants={staggerItem}
+              className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed h-48 animate-pulse"
+            />
           ))}
-        </div>
+        </motion.div>
       </div>
     );
   }
@@ -431,10 +593,15 @@ export default function MarketInsights() {
     <div className="max-w-5xl mx-auto pb-12">
 
       {/* ── Header ───────────────────────────────────────────────────────── */}
-      <div className="mb-6">
+      <motion.div
+        className="mb-6"
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: EASE }}
+      >
         <h2 className="text-display font-bold text-on-background mb-1 tracking-tight">Market Insights</h2>
         <p className="text-body-lg text-secondary">Real engine-by-engine analysis from your actual searches.</p>
-      </div>
+      </motion.div>
 
       {/* ── Global platform intelligence (live Supabase) ─────────────────── */}
       <GlobalInsightsPanel brand={activeBrand} />
@@ -610,7 +777,7 @@ export default function MarketInsights() {
       <div className="space-y-6">
 
         {/* ── 1. Score trend ─────────────────────────────────────────────── */}
-        <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
+        <AnimatedSection className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
           <h3 className="text-h2 font-semibold text-on-background mb-1">
             📈 Visibility Score History
           </h3>
@@ -647,16 +814,19 @@ export default function MarketInsights() {
                     stroke={BRAND_COLOR}
                     strokeWidth={3}
                     dot={{ r: 5, fill: BRAND_COLOR, strokeWidth: 0 }}
-                    activeDot={{ r: 7 }}
+                    activeDot={{ r: 8, strokeWidth: 2, stroke: BRAND_COLOR, fill: "#fff" }}
+                    isAnimationActive
+                    animationDuration={1400}
+                    animationEasing="ease-out"
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
-        </div>
+        </AnimatedSection>
 
         {/* ── 2. Engine found rate ────────────────────────────────────────── */}
-        <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
+        <AnimatedSection className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
           <h3 className="text-h2 font-semibold text-on-background mb-1">
             🤖 Engine-by-Engine Coverage
           </h3>
@@ -664,15 +834,23 @@ export default function MarketInsights() {
             Across all scans for <strong>{activeBrand}</strong>, how often did each AI engine mention it?
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4"
+            variants={stagger}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: "-40px" }}
+          >
             {engineStats.map((eng) => {
               const meta = ENGINE_META[eng.key];
               const rate = eng.foundRate;
               const hasData = eng.totalScans > 0;
               return (
-                <div
+                <motion.div
                   key={eng.key}
+                  variants={staggerItem}
                   className="rounded-xl border border-tertiary-fixed bg-surface-container-low p-5 flex flex-col gap-3"
+                  whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
                 >
                   <div className="flex items-center gap-2">
                     <div
@@ -691,32 +869,26 @@ export default function MarketInsights() {
                   ) : (
                     <>
                       <div className="flex items-end gap-1.5">
-                        <span className="text-[32px] font-extrabold leading-none text-on-background">{rate}</span>
+                        <span className="text-[32px] font-extrabold leading-none text-on-background">
+                          <AnimatedNumber value={rate ?? 0} />
+                        </span>
                         <span className="text-h2 text-secondary mb-1">%</span>
                       </div>
-                      <div className="w-full h-2 rounded-full bg-surface-dim overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-700"
-                          style={{
-                            width: `${rate ?? 0}%`,
-                            backgroundColor: (rate ?? 0) >= 50 ? "#22c55e" : (rate ?? 0) > 0 ? "#f59e0b" : "#ef4444",
-                          }}
-                        />
-                      </div>
+                      <AnimatedCoverageBar rate={rate} color={meta.color} />
                       <p className="text-label-sm text-secondary">
                         Found in {eng.foundCount}/{eng.totalScans} scan{eng.totalScans !== 1 ? "s" : ""}
                       </p>
                     </>
                   )}
-                </div>
+                </motion.div>
               );
             })}
-          </div>
-        </div>
+          </motion.div>
+        </AnimatedSection>
 
         {/* ── 3. Rank when found ─────────────────────────────────────────── */}
         {engineStats.some((e) => e.avgRank !== null) && (
-          <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
+          <AnimatedSection className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
             <h3 className="text-h2 font-semibold text-on-background mb-1">
               🏆 Your Position When Mentioned
             </h3>
@@ -725,13 +897,21 @@ export default function MarketInsights() {
               Lower is better — #1 means the engine listed you first.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <motion.div
+              className="grid grid-cols-2 sm:grid-cols-3 gap-4"
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
               {engineStats.map((eng) => {
                 const meta = ENGINE_META[eng.key];
                 return (
-                  <div
+                  <motion.div
                     key={eng.key}
+                    variants={staggerItem}
                     className="flex flex-col items-center gap-2 p-4 rounded-xl bg-surface-container-low border border-tertiary-fixed"
+                    whileHover={{ scale: 1.03, transition: { duration: 0.2 } }}
                   >
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-[16px]" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1", color: meta.color }}>
@@ -742,9 +922,15 @@ export default function MarketInsights() {
 
                     {eng.avgRank !== null ? (
                       <>
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold border ${rankBadgeClass(eng.avgRank)}`}>
+                        <motion.span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold border ${rankBadgeClass(eng.avgRank)}`}
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          whileInView={{ scale: 1, opacity: 1 }}
+                          viewport={{ once: true }}
+                          transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
+                        >
                           #{eng.avgRank}
-                        </span>
+                        </motion.span>
                         <p className="text-label-sm text-tertiary-container text-center">{rankLabel(eng.avgRank)}</p>
                       </>
                     ) : (
@@ -753,21 +939,21 @@ export default function MarketInsights() {
                         <p className="text-label-sm text-tertiary-container text-center">Not found yet</p>
                       </>
                     )}
-                  </div>
+                  </motion.div>
                 );
               })}
-            </div>
+            </motion.div>
 
             <p className="mt-4 text-label-sm text-secondary bg-surface-container px-4 py-3 rounded-lg flex items-start gap-2">
               <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 0" }}>info</span>
               Rank #1 = your brand was the engine&apos;s first recommendation. Rank #5 = you appeared but were buried.
             </p>
-          </div>
+          </AnimatedSection>
         )}
 
         {/* ── 4. Competitors from this scan ──────────────────────────────── */}
         {scanCompetitors.length > 0 && (
-          <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
+          <AnimatedSection className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
             <h3 className="text-h2 font-semibold text-on-background mb-1">
               🔍 Brands Appearing Instead of You
             </h3>
@@ -775,16 +961,24 @@ export default function MarketInsights() {
               In <strong>this scan</strong>, when engines didn&apos;t mention <strong>{activeBrand}</strong>, these brands appeared instead.
             </p>
 
-            <div className="flex flex-wrap gap-2">
+            <motion.div
+              className="flex flex-wrap gap-2"
+              variants={stagger}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+            >
               {scanCompetitors.map((name, i) => (
-                <span
+                <motion.span
                   key={i}
+                  variants={staggerItem}
                   className="px-3 py-1.5 rounded-full text-label-sm font-medium bg-surface-container-low border border-tertiary-fixed text-on-background"
+                  whileHover={{ scale: 1.05 }}
                 >
                   {name}
-                </span>
+                </motion.span>
               ))}
-            </div>
+            </motion.div>
 
             {/* All-time competitor frequency */}
             {topCompetitors.length > 0 && (
@@ -798,9 +992,7 @@ export default function MarketInsights() {
                     return (
                       <div key={comp.name} className="flex items-center gap-3">
                         <span className="text-body-md font-medium text-on-background w-36 shrink-0 truncate">{comp.name}</span>
-                        <div className="flex-1 h-2.5 rounded-full bg-surface-dim overflow-hidden">
-                          <div className="h-full rounded-full bg-secondary transition-all duration-700" style={{ width: `${pct}%` }} />
-                        </div>
+                        <AnimatedBar pct={pct} color="#64748b" />
                         <span className="text-label-sm text-tertiary-container w-20 text-right shrink-0">
                           {comp.count} mention{comp.count !== 1 ? "s" : ""}
                         </span>
@@ -810,12 +1002,12 @@ export default function MarketInsights() {
                 </div>
               </div>
             )}
-          </div>
+          </AnimatedSection>
         )}
 
         {/* Fallback: top competitors when no selected-scan competitors */}
         {scanCompetitors.length === 0 && topCompetitors.length > 0 && (
-          <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
+          <AnimatedSection className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
             <h3 className="text-h2 font-semibold text-on-background mb-1">
               🔍 Brands Appearing Instead of You
             </h3>
@@ -829,9 +1021,7 @@ export default function MarketInsights() {
                 return (
                   <div key={comp.name} className="flex items-center gap-3">
                     <span className="text-body-md font-medium text-on-background w-36 shrink-0 truncate">{comp.name}</span>
-                    <div className="flex-1 h-2.5 rounded-full bg-surface-dim overflow-hidden">
-                      <div className="h-full rounded-full bg-secondary transition-all duration-700" style={{ width: `${pct}%` }} />
-                    </div>
+                    <AnimatedBar pct={pct} color="#64748b" />
                     <span className="text-label-sm text-tertiary-container w-20 text-right shrink-0">
                       {comp.count} mention{comp.count !== 1 ? "s" : ""}
                     </span>
@@ -839,19 +1029,21 @@ export default function MarketInsights() {
                 );
               })}
             </div>
-          </div>
+          </AnimatedSection>
         )}
 
         {/* ── 5. Blind spot callout ──────────────────────────────────────── */}
         {blindSpot && blindSpot.foundRate !== null && blindSpot.foundRate < 50 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 flex items-start gap-4">
-            <span
+          <AnimatedSection className="bg-amber-50 border border-amber-200 rounded-xl p-6 flex items-start gap-4">
+            <motion.span
               className="material-symbols-outlined text-[28px] text-amber-500 shrink-0 mt-0.5"
               aria-hidden="true"
               style={{ fontVariationSettings: "'FILL' 1" }}
+              animate={{ rotate: [0, -8, 8, -8, 0] }}
+              transition={{ duration: 0.6, delay: 0.4, ease: "easeInOut" }}
             >
               warning
-            </span>
+            </motion.span>
             <div>
               <p className="text-h2 font-semibold text-amber-900 mb-1">
                 Blind Spot: {ENGINE_META[blindSpot.key].label} rarely mentions you
@@ -864,7 +1056,7 @@ export default function MarketInsights() {
                   : "Consider publishing more content that directly addresses your target queries to improve coverage."}
               </p>
             </div>
-          </div>
+          </AnimatedSection>
         )}
 
         {/* ── 6. Other brands in history ─────────────────────────────────── */}
@@ -878,33 +1070,42 @@ export default function MarketInsights() {
           if (otherBrands.length === 0) return null;
 
           return (
-            <div className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
+            <AnimatedSection className="bg-surface-container-lowest rounded-xl border border-tertiary-fixed shadow-sm p-6">
               <h3 className="text-h2 font-semibold text-on-background mb-1">Other Brands You&apos;ve Scanned</h3>
               <p className="text-body-md text-secondary mb-4">
                 Select a different search from the dropdown above to switch brands.
               </p>
-              <div className="flex flex-wrap gap-2">
+              <motion.div
+                className="flex flex-wrap gap-2"
+                variants={stagger}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+              >
                 {otherBrands.map((brand) => {
                   const latestForBrand = history.find((h) => h.brandName.toLowerCase() === brand.toLowerCase());
                   return (
-                    <button
+                    <motion.button
                       key={brand}
+                      variants={staggerItem}
                       onClick={() => {
                         const item = history.find((h) => h.brandName.toLowerCase() === brand.toLowerCase());
                         if (item) setSelectedId(item.id);
                       }}
                       className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-container-low border border-tertiary-fixed hover:border-brand/40 hover:bg-brand/5 transition-colors"
+                      whileHover={{ scale: 1.04 }}
+                      whileTap={{ scale: 0.97 }}
                     >
                       <span
                         className={`w-2 h-2 rounded-full shrink-0 ${scoreDotClass(latestForBrand?.score ?? 0)}`}
                       />
                       <span className="text-body-md text-on-background">{brand}</span>
                       <span className="text-label-sm text-tertiary-container">{latestForBrand?.score ?? 0}%</span>
-                    </button>
+                    </motion.button>
                   );
                 })}
-              </div>
-            </div>
+              </motion.div>
+            </AnimatedSection>
           );
         })()}
 

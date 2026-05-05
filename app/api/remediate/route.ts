@@ -1,6 +1,7 @@
 import { streamObject } from 'ai';
 import { google } from '@ai-sdk/google';
 import { remediationSchema } from '@/lib/schemas/remediation';
+import { remediateRatelimit, checkRateLimit } from '@/lib/rate-limit';
 
 export const runtime = 'edge';
 export const maxDuration = 90;
@@ -61,87 +62,111 @@ Be ruthlessly specific throughout. Every word must be weaponized for semantic se
 }
 
 export async function POST(req: Request) {
-  const contentType = req.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
-    return new Response(JSON.stringify({ error: 'Content-Type must be application/json' }), {
-      status: 415,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  let body: unknown;
   try {
-    body = await req.json();
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    // ── Rate limiting ──────────────────────────────────────────────────────
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '127.0.0.1';
+    const { limited, reset } = await checkRateLimit(remediateRatelimit, `remediate:${ip}`);
+    if (limited) {
+      const retryAfter = reset ? Math.ceil((reset - Date.now()) / 1000) : 60;
+      return new Response(
+        JSON.stringify({ error: `Rate limit exceeded. Please wait ${retryAfter}s before generating another strategy.` }),
+        { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': String(retryAfter) } },
+      );
+    }
 
-  if (typeof body !== 'object' || body === null) {
-    return new Response(JSON.stringify({ error: 'Invalid request body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    // ── Input validation ───────────────────────────────────────────────────
+    const contentType = req.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      return new Response(JSON.stringify({ error: 'Content-Type must be application/json' }), {
+        status: 415,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-  const { brandName, query, competitors } = body as Record<string, unknown>;
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-  if (typeof brandName !== 'string' || typeof query !== 'string') {
-    return new Response(JSON.stringify({ error: 'brandName and query must be strings' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    if (typeof body !== 'object' || body === null) {
+      return new Response(JSON.stringify({ error: 'Invalid request body' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-  const safeBrand = sanitize(brandName);
-  const safeQuery = sanitize(query);
+    const { brandName, query, competitors } = body as Record<string, unknown>;
 
-  if (!safeBrand || !safeQuery) {
-    return new Response(JSON.stringify({ error: 'brandName and query must not be empty' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    if (typeof brandName !== 'string' || typeof query !== 'string') {
+      return new Response(JSON.stringify({ error: 'brandName and query must be strings' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-  if (safeBrand.length > MAX_INPUT_LENGTH || safeQuery.length > MAX_INPUT_LENGTH) {
+    const safeBrand = sanitize(brandName);
+    const safeQuery = sanitize(query);
+
+    if (!safeBrand || !safeQuery) {
+      return new Response(JSON.stringify({ error: 'brandName and query must not be empty' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (safeBrand.length > MAX_INPUT_LENGTH || safeQuery.length > MAX_INPUT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Inputs must be ${MAX_INPUT_LENGTH} characters or fewer` }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const competitorList = Array.isArray(competitors)
+      ? competitors
+          .filter((c): c is string => typeof c === 'string')
+          .map((c) => sanitize(c))
+          .filter(Boolean)
+          .slice(0, 5)
+      : [];
+
+    const topCompetitors =
+      competitorList.length > 0 ? competitorList.join(', ') : 'top market competitors';
+
+    const prompt = buildPrompt(safeBrand, safeQuery, topCompetitors);
+    const sharedOptions = { schema: remediationSchema, prompt } as const;
+
+    // NOTE: streamObject errors that occur MID-STREAM (after the 200 is sent) cannot
+    // be caught here; the client's silentlyFailed detection handles those gracefully.
+    // Pre-stream errors (503 overloaded, auth failures) ARE catchable — we use maxRetries:1
+    // per model so we fail fast and move to the next variant instead of hammering one endpoint.
+    for (const model of MODEL_CASCADE) {
+      try {
+        const result = streamObject({ model, maxOutputTokens: 8192, maxRetries: 1, ...sharedOptions });
+        return result.toTextStreamResponse();
+      } catch (err) {
+        console.warn(`[AEO] Model ${String(model)} failed, cascading...`, err);
+        continue;
+      }
+    }
+
     return new Response(
-      JSON.stringify({ error: `Inputs must be ${MAX_INPUT_LENGTH} characters or fewer` }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } },
+      JSON.stringify({
+        error: 'High Traffic Alert: All AI models are currently at capacity. Please wait 30 seconds and try again.',
+      }),
+      { status: 503, headers: { 'Content-Type': 'application/json' } },
+    );
+  } catch (error) {
+    console.error('[AEO] Fatal Remediation Error:', error);
+    return new Response(
+      JSON.stringify({
+        error: 'An internal server error occurred while building your strategy. Please try again.',
+      }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } },
     );
   }
-
-  const competitorList = Array.isArray(competitors)
-    ? competitors
-        .filter((c): c is string => typeof c === 'string')
-        .map((c) => sanitize(c))
-        .filter(Boolean)
-        .slice(0, 5)
-    : [];
-
-  const topCompetitors =
-    competitorList.length > 0 ? competitorList.join(', ') : 'top market competitors';
-
-  const prompt = buildPrompt(safeBrand, safeQuery, topCompetitors);
-  const sharedOptions = { schema: remediationSchema, prompt } as const;
-
-  // NOTE: streamObject errors that occur MID-STREAM (after the 200 is sent) cannot
-  // be caught here; the client's silentlyFailed detection handles those gracefully.
-  // Pre-stream errors (503 overloaded, auth failures) ARE catchable — we use maxRetries:1
-  // per model so we fail fast and move to the next variant instead of hammering one endpoint.
-  for (const model of MODEL_CASCADE) {
-    try {
-      const result = streamObject({ model, maxOutputTokens: 8192, maxRetries: 1, ...sharedOptions });
-      return result.toTextStreamResponse();
-    } catch {
-      // This model is unavailable — try the next one in the cascade.
-      continue;
-    }
-  }
-
-  return new Response(
-    JSON.stringify({ error: 'All AI models are currently overloaded. Please try again in a moment.' }),
-    { status: 503, headers: { 'Content-Type': 'application/json' } },
-  );
 }

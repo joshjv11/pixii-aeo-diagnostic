@@ -99,7 +99,14 @@ export async function GET(req: Request) {
       totalDiagnostics: diagIds.length,
     });
   } catch (error) {
-    console.error('Insights API Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch global insights' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Insights API Error:', msg);
+    return NextResponse.json(
+      {
+        error: 'Database connection failed. Please check your Supabase instance.',
+        details: process.env.NODE_ENV === 'development' ? msg : undefined,
+      },
+      { status: 500 },
+    );
   }
 }

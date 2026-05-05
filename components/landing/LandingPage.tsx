@@ -172,7 +172,7 @@ function LogoMarquee() {
           transition={{ duration: 0.5, ease: EASE }}
           className="text-center text-xs font-semibold text-gray-400 uppercase tracking-[0.2em] mb-14"
         >
-          Top agencies and brands use Pixii to scale their creative
+          Category leaders are already capturing the AI Search era
         </motion.h2>
 
         {/* Marquee wrapper */}
@@ -250,10 +250,10 @@ export default function LandingPage() {
               }}
             >
               <span
-                className="w-1.5 h-1.5 rounded-full"
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
                 style={{ backgroundColor: BRAND }}
               />
-              Now in Beta · Free Trial Available
+              The SEO era is shifting. Don&apos;t get left behind.
             </span>
           </motion.div>
 
@@ -263,23 +263,23 @@ export default function LandingPage() {
             className="text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.05] mb-6"
           >
             AI Engine Optimization{" "}
-            <span style={{ color: BRAND }}>(AEO). Instantly.</span>
+            <span style={{ color: BRAND }}>(AEO).</span>
           </motion.h1>
 
-          {/* Subtitle */}
+          {/* Subtitle with FOMO & Loss Aversion */}
           <motion.p
             variants={fadeUp}
             className="text-lg md:text-xl text-[#666666] max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Diagnose your brand&apos;s visibility across the latent space of top
-            LLMs. Drop your ASIN. Get the strategy that sells.
+            While you spend thousands fighting for traditional SEO, shoppers are already asking ChatGPT and Perplexity what to buy.
+            Drop your ASIN to see if AI engines recommend you—<strong className="text-gray-900 font-semibold">or your competitors.</strong>
           </motion.p>
 
           {/* Input pill */}
           <motion.div variants={fadeUp} className="max-w-2xl mx-auto w-full mb-5">
             <form
               onSubmit={handleRun}
-              className="bg-white p-2 rounded-2xl border border-gray-200 flex items-center gap-2"
+              className="bg-white p-2 rounded-2xl border border-gray-200 flex items-center gap-2 relative overflow-hidden focus-within:ring-2 focus-within:ring-brand/30 transition-all"
               style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.07)" }}
             >
               {/* Country selector */}
@@ -324,18 +324,18 @@ export default function LandingPage() {
                   boxShadow: `0 4px 16px ${BRAND}50`,
                 }}
               >
-                Run Diagnostic
+                Scan AI Visibility
               </motion.button>
             </form>
 
-            {/* Trust indicators */}
-            <div className="mt-5 flex items-center justify-center gap-6 text-sm text-gray-400">
-              {["Free trial", "No credit card", "Results in 2 minutes"].map(
+            {/* Trust indicators / FOMO triggers */}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-gray-500 font-medium">
+              {["Diagnose AI Blindspots", "Hijack Competitor Traffic", "Deploy in 2 minutes"].map(
                 (item) => (
                   <span key={item} className="flex items-center gap-1.5">
                     <svg
                       aria-hidden="true"
-                      className="w-3.5 h-3.5 text-green-500 shrink-0"
+                      className="w-4 h-4 text-brand shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -352,35 +352,6 @@ export default function LandingPage() {
                 )
               )}
             </div>
-          </motion.div>
-
-          {/* Sub CTAs */}
-          <motion.div
-            variants={fadeUp}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2"
-          >
-            <motion.a
-              href="/dashboard"
-              whileHover={{ scale: 1.03, y: -2 }}
-              whileTap={{ scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="w-full sm:w-auto px-12 py-4 rounded-xl font-bold text-white text-base"
-              style={{
-                backgroundColor: BRAND,
-                boxShadow: `0 6px 24px ${BRAND}44`,
-              }}
-            >
-              Get Started
-            </motion.a>
-            <motion.a
-              href="#"
-              whileHover={{ scale: 1.02, borderColor: "#9ca3af" }}
-              whileTap={{ scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className="w-full sm:w-auto px-12 py-4 border-2 border-gray-200 rounded-xl font-bold text-[#666666] text-base hover:border-gray-400 transition-colors"
-            >
-              Book a Demo
-            </motion.a>
           </motion.div>
         </motion.div>
       </main>

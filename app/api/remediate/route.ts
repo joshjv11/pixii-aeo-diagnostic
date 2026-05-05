@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateObject } from 'ai';
 import { google } from '@ai-sdk/google';
+import { groq } from '@ai-sdk/groq';
 import { remediationSchema } from '@/lib/schemas/remediation';
 import { remediateRatelimit, checkRateLimit } from '@/lib/rate-limit';
 
@@ -9,20 +10,17 @@ export const maxDuration = 90;
 
 const MAX_INPUT_LENGTH = 200;
 
-// generateObject is used instead of streamObject for one critical reason:
-// streamObject commits an HTTP 200 before it knows if the model will succeed.
-// Once that header is sent there is no way to fall back — the client receives
-// a completed stream with no data and shows "returned no data". generateObject
-// awaits the full validated response before any HTTP response is written, so
-// the cascade below actually works: if a model throws at ANY point (auth error,
-// capacity, malformed output, schema validation failure) we catch it, move to
-// the next model, and only send a response once we have a guaranteed valid object.
+// Cascade priority: Groq first (no quota issues, tool-call mode works reliably with
+// generateObject), Gemini as geographic/provider fallbacks. gemini-1.5-* are intentionally
+// excluded — they return "not found for API version v1beta" with @ai-sdk/google v3.
+// maxRetries:0 on each model so a single failure cascades immediately instead of
+// burning 2× the time on retries before moving to the next provider.
 const MODEL_CASCADE = [
-  google('gemini-2.0-flash'),        // GA, fastest, most reliable for structured output
-  google('gemini-2.0-flash-lite'),   // Lighter quota, good fallback
-  google('gemini-1.5-flash'),        // Battle-tested GA model
-  google('gemini-2.5-flash'),        // Experimental — lower quota, used last
-  google('gemini-1.5-flash-8b'),     // Last resort: smallest, most available
+  groq('llama-3.3-70b-versatile'),                           // Primary: fast, JSON/tool mode ✓
+  groq('meta-llama/llama-4-scout-17b-16e-instruct'),         // Fallback: large context ✓
+  groq('llama-3.1-8b-instant'),                              // Fallback: smallest/fastest Groq ✓
+  google('gemini-2.0-flash'),                                // Cross-provider: Gemini GA ✓
+  google('gemini-2.5-flash'),                                // Last resort: experimental Gemini
 ];
 
 function sanitize(value: string): string {
@@ -131,7 +129,7 @@ export async function POST(req: Request) {
           model,
           schema: remediationSchema,
           prompt,
-          maxRetries: 1,
+          maxRetries: 0,
         });
         // Only reached if the model succeeded AND the object passed schema validation
         return NextResponse.json(object);

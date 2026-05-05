@@ -284,7 +284,7 @@ function GlobalInsightsPanel({ brand }: { brand: string }) {
                     <YAxis tickFormatter={(v) => `${v}%`} tick={{ fill: "#575e70", fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} />
                     <RechartsTooltip
                       contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", borderColor: "#e1e3e4" }}
-                      formatter={(v: number) => [`${v}% visibility`, "Score"]}
+                      formatter={(v) => [`${v}% visibility`, "Score"]}
                     />
                     <Line type="monotone" dataKey="score" stroke="#cf4522" strokeWidth={3} dot={{ r: 4, fill: "#cf4522", strokeWidth: 0 }} activeDot={{ r: 7 }} />
                   </LineChart>
@@ -311,7 +311,7 @@ function GlobalInsightsPanel({ brand }: { brand: string }) {
                       <PolarAngleAxis dataKey="engine" tick={{ fill: "#575e70", fontSize: 11 }} />
                       <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                       <Radar name="Visibility %" dataKey="foundRate" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.35} />
-                      <RechartsTooltip formatter={(v: number) => [`${v}%`, "Found rate"]} contentStyle={{ borderRadius: "8px" }} />
+                      <RechartsTooltip formatter={(v) => [`${v}%`, "Found rate"]} contentStyle={{ borderRadius: "8px" }} />
                     </RadarChart>
                   </ResponsiveContainer>
                 </div>
@@ -333,7 +333,7 @@ function GlobalInsightsPanel({ brand }: { brand: string }) {
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e1e3e4" />
                       <XAxis type="number" stroke="#94a3b8" tick={{ fontSize: 11 }} />
                       <YAxis dataKey="name" type="category" stroke="#151c27" fontSize={11} fontWeight="bold" tick={{ fill: "#151c27" }} />
-                      <RechartsTooltip cursor={{ fill: "#f0f3ff" }} formatter={(v: number) => [v, "Times recommended"]} contentStyle={{ borderRadius: "8px" }} />
+                      <RechartsTooltip cursor={{ fill: "#f0f3ff" }} formatter={(v) => [v, "Times recommended"]} contentStyle={{ borderRadius: "8px" }} />
                       <Bar dataKey="count" name="Times Recommended" fill="#cf4522" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
